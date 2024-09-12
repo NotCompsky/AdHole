@@ -11,11 +11,13 @@
 #include <QColor>
 #include <QPalette>
 #include <QMessageBox>
-#include <compsky/os/write.hpp>
+#include <unistd.h>
+#include <fcntl.h>
 #include "systemd.hpp"
 
-ListManager::ListManager(QWidget *parent)
+ListManager::ListManager(QWidget *parent,  const char* const settings_dir)
 : QWidget(parent)
+, qstr_settings_dir(settings_dir)
 {
     QVBoxLayout *layout = new QVBoxLayout(this);
 
@@ -25,7 +27,7 @@ ListManager::ListManager(QWidget *parent)
 
     // Read the list of default-on files
     QStringList defaultOnFiles;
-    QFile defaultOnFile("/home/vangelic/Documents/domain_checking.default-on.txt");
+    QFile defaultOnFile(qstr_settings_dir + "/_default-on.txt");
     if (defaultOnFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&defaultOnFile);
         while (!in.atEnd()) {
@@ -36,7 +38,7 @@ ListManager::ListManager(QWidget *parent)
 
     // Read the list of filename-to-color mappings
     QMap<QString, QColor> filenameToColor;
-    QFile filenameToColorFile("/home/vangelic/Documents/domain_checking.filename_to_color.txt");
+    QFile filenameToColorFile(qstr_settings_dir+"/_filename_to_color.txt");
     if (filenameToColorFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&filenameToColorFile);
         while (!in.atEnd()) {
@@ -51,9 +53,13 @@ ListManager::ListManager(QWidget *parent)
         }
     }
 
-    QDir dir("/home/vangelic/Documents/domain_checking.py.modules");
+    QDir dir(qstr_settings_dir);
     QStringList files = dir.entryList(QDir::Files);
     for (const QString &file : files) {
+		if ((file == "_default-on.txt") || (file == "_filename_to_color.txt")){
+			continue;
+		}
+
         QCheckBox *checkBox = new QCheckBox(file, checkBoxesWidget);
 
         // Set the checkbox state based on the default-on list
@@ -94,7 +100,7 @@ void ListManager::update_things(){
         if (checkBox != nullptr && checkBox->checkState() == Qt::Checked) {
 			selected_files += checkBox->text();
 			selected_files += '\n';
-			QString filename = QString("/home/vangelic/Documents/domain_checking.py.modules/%1").arg(checkBox->text());
+			QString filename = QString(qstr_settings_dir+"/%1").arg(checkBox->text());
             QFile file(filename);
             if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QTextStream in(&file);
@@ -113,13 +119,17 @@ void ListManager::update_things(){
             }
         }
     }
-    compsky::os::WriteOnlyFile f("/etc/dnsmasq.d/domain_checking.conf");
-	f.write_from_buffer(x.c_str(), x.size());
-	if (unlikely(restart_dnsmasq() != 0)){
+	const int fd1 = ::open("/etc/dnsmasq.d/domain_checking.conf", O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP);
+	::write(fd1, x.c_str(), x.size());
+	::close(fd1);
+	if (restart_dnsmasq() != 0){
+		[[unlikely]]
 		QMessageBox::warning(this, "Error", "Failed to restart dnsmasq");
 	}
 	
 	const std::string y = selected_files.toStdString();
-	compsky::os::WriteOnlyFile f2("/home/vangelic/Documents/domain_checking.default-on.txt");
-	f2.write_from_buffer(y.c_str(), y.size());
+	const std::string fp2 = (qstr_settings_dir + "/_default-on.txt").toStdString();
+	const int fd2 = ::open(fp2.c_str(), O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP);
+	::write(fd2, y.c_str(), y.size());
+	::close(fd2);
 }

@@ -14,7 +14,6 @@ AdHole blocks everything except whitelisted domains. Its settings are stored as 
 
 You must have:
 
-* [libcompsky](https://github.com/NotCompsky/libcompsky)
 * cmake
 * Qt5 widgets development module (probably qtbase5-dev)
 * Any C compiler (such as clang or gcc)
