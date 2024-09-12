@@ -14,16 +14,18 @@ AdHole blocks everything except whitelisted domains. Its settings are stored as 
 
 You must have:
 
+* systemd
 * cmake
 * Qt5 widgets development module (probably qtbase5-dev)
 * Any C compiler (such as clang or gcc)
   * cmake might struggle to find it. If that happens, set environment variable CC to the path to the C compiler.
 * Any C++ compiler (such as clang++ or g++)
   * cmake might struggle to find it. If that happens, set environment variable CXX to the path to the C++ compiler.
+* libsystemd-dev
 
 For Ubuntu, this is achieved with
 
-    sudo apt install --no-install-recommends cmake clang qtbase5-dev
+    sudo apt install --no-install-recommends cmake clang qtbase5-dev libsystemd-dev
 
 Your system must use dnsmasq, not systemd-resolved.
 
