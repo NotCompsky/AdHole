@@ -54,7 +54,7 @@ Write each list of domain names to files within a directory (do not use subdirec
 
 Then run
 
-    sudo AdHole
+    sudo AdHole /path/to/that/directory
 
 Then select or deselect any file names you wish to be whitelisted.
 
